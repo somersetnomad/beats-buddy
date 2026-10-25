@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import type { BeatPattern, DrumTrackId, PitchTrackId, SavedBeat, TrackId } from '@/lib/beat/types'
-import { createEmptyPattern, randomPattern, structuredClonePattern, PRESETS, isEmptyPattern } from '@/lib/beat/patterns'
+import { createEmptyPattern, createStarterPattern, randomPattern, structuredClonePattern, PRESETS, isEmptyPattern } from '@/lib/beat/patterns'
 import { BeatEngine } from '@/lib/beat/audio-engine'
 import { loadLibrary, saveBeat, deleteBeat as deleteBeatFromStorage, renameBeat as renameBeatInStorage } from '@/lib/beat/storage'
 import { celebrate, pulse } from '@/lib/beat/fx'
@@ -19,7 +19,7 @@ type Origin = { x: number; y: number } | undefined
 
 export default function Page() {
   const [view, setView] = useState<View>('home')
-  const [pattern, setPattern] = useState<BeatPattern>(() => createEmptyPattern())
+  const [pattern, setPattern] = useState<BeatPattern>(() => createStarterPattern())
   const [beatName, setBeatName] = useState('My first beat')
   const [beatId, setBeatId] = useState<string | null>(null)
   const [currentStep, setCurrentStep] = useState(-1)

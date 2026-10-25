@@ -18,7 +18,7 @@ const code = js.outputFiles[0].text.replace(/<\/script/gi, '<\\/script')
 
 // 2) Tailwind + app CSS
 const cssIn = fs.readFileSync(REPO + '/src/app/globals.css', 'utf8')
-const out = await postcss([tw({ base: REPO })]).process(cssIn, { from: REPO + '/src/app/globals.css' })
+const out = await postcss([tw({ base: path.join(REPO, 'src') })]).process(cssIn, { from: REPO + '/src/app/globals.css' })
 
 // 3) fonts: latin subsets only, embedded
 function fontCss(pkg) {

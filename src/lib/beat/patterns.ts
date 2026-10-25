@@ -46,6 +46,24 @@ export function createEmptyPattern(): BeatPattern {
   return buildPattern(100, 0.1, {}, [], [])
 }
 
+/**
+ * What the studio opens with: a complete, head-nodding groove on every track, so the
+ * first thing anyone hears is good. Bass rows 0-5 = C2..C3, melody rows 0-7 = C4..F5.
+ */
+export function createStarterPattern(): BeatPattern {
+  return buildPattern(
+    96, 0.18,
+    {
+      kick: [0, 3, 8, 10],
+      snare: [4, 12],
+      hihat: [0, 2, 4, 6, 8, 10, 12, 14, 15],
+      clap: [12],
+    },
+    [[0, 0], [0, 3], [3, 8], [2, 10], [4, 14]],
+    [[5, 0], [4, 2], [3, 4], [5, 7], [6, 8], [4, 10], [3, 12], [2, 14]]
+  )
+}
+
 // ---------------------------------------------------------------- presets
 
 export const PRESETS: Preset[] = [
