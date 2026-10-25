@@ -7,6 +7,7 @@ import { createEmptyPattern, randomPattern, structuredClonePattern, PRESETS, isE
 import { BeatEngine } from '@/lib/beat/audio-engine'
 import { loadLibrary, saveBeat, deleteBeat as deleteBeatFromStorage, renameBeat as renameBeatInStorage } from '@/lib/beat/storage'
 import { celebrate, pulse } from '@/lib/beat/fx'
+import { fallbackPattern } from '@/lib/beat/vibes'
 import HomeView from '@/components/beat/HomeView'
 import StudioView from '@/components/beat/StudioView'
 import LibraryView from '@/components/beat/LibraryView'
@@ -193,19 +194,29 @@ export default function Page() {
     setAiLoading(true)
     setAiNotice(null)
     try {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data?.pattern) throw new Error(data?.error || 'The beat generator did not answer.')
+      let data: { pattern?: BeatPattern; source?: string; error?: string } | null = null
+      if (process.env.NEXT_PUBLIC_BB_PREVIEW !== '1') try {
+        const res = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt }),
+        })
+        data = await res.json().catch(() => null)
+        if (res.status === 400 && data?.error) throw new Error(data.error)
+      } catch (err) {
+        if (err instanceof Error && data?.error) throw err
+        data = null // offline or no server: the built-in vibe library still answers
+      }
+      if (!data?.pattern) {
+        await new Promise((r) => setTimeout(r, 900)) // let the "making it" moment land
+        data = { pattern: fallbackPattern(prompt), source: 'fallback' }
+      }
       setPattern(data.pattern as BeatPattern)
       setBeatId(null) // new vibe = save as a new beat
       if (beatName === 'My first beat' || !beatName.trim()) setBeatName(prompt.slice(0, 32))
       setAiNotice(
         data.source === 'fallback'
-          ? 'The AI was busy, so this one came from our built-in vibe library. It is fully editable.'
+          ? 'Built from the vibe library to match your words. Every pad is yours to change.'
           : 'Written by AI from your vibe. Press play, then make it yours.'
       )
       celebrate(origin)
@@ -235,6 +246,10 @@ export default function Page() {
 
   const handleExport = useCallback(async () => {
     if (exporting) return
+    if (process.env.NEXT_PUBLIC_BB_PREVIEW === '1') {
+      toast('Export is off in this preview', { description: 'This hosted preview cannot start downloads. Run the full app to export WAV files.' })
+      return
+    }
     setExporting(true)
     try {
       const blob = await getEngine().renderWav(patternRef.current, 4)
