@@ -7,7 +7,7 @@ import { createEmptyPattern, randomPattern, structuredClonePattern, PRESETS, isE
 import { BeatEngine } from '@/lib/beat/audio-engine'
 import { loadLibrary, saveBeat, deleteBeat as deleteBeatFromStorage, renameBeat as renameBeatInStorage } from '@/lib/beat/storage'
 import { celebrate, pulse } from '@/lib/beat/fx'
-import { fallbackPattern } from '@/lib/beat/vibes'
+import { generateBeat, saveWav } from '@/lib/beat/platform'
 import HomeView from '@/components/beat/HomeView'
 import StudioView from '@/components/beat/StudioView'
 import LibraryView from '@/components/beat/LibraryView'
@@ -194,30 +194,16 @@ export default function Page() {
     setAiLoading(true)
     setAiNotice(null)
     try {
-      let data: { pattern?: BeatPattern; source?: string; error?: string } | null = null
-      if (process.env.NEXT_PUBLIC_BB_PREVIEW !== '1') try {
-        const res = await fetch('/api/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt }),
-        })
-        data = await res.json().catch(() => null)
-        if (res.status === 400 && data?.error) throw new Error(data.error)
-      } catch (err) {
-        if (err instanceof Error && data?.error) throw err
-        data = null // offline or no server: the built-in vibe library still answers
-      }
-      if (!data?.pattern) {
-        await new Promise((r) => setTimeout(r, 900)) // let the "making it" moment land
-        data = { pattern: fallbackPattern(prompt), source: 'fallback' }
-      }
-      setPattern(data.pattern as BeatPattern)
+      const result = await generateBeat(prompt)
+      setPattern(result.pattern)
       setBeatId(null) // new vibe = save as a new beat
       if (beatName === 'My first beat' || !beatName.trim()) setBeatName(prompt.slice(0, 32))
       setAiNotice(
-        data.source === 'fallback'
-          ? 'Built from the vibe library to match your words. Every pad is yours to change.'
-          : 'Written by AI from your vibe. Press play, then make it yours.'
+        result.source === 'ai'
+          ? 'Written by Claude from your vibe. Press play, then make it yours.'
+          : result.reason === 'not_granted'
+            ? 'Claude was not allowed, so this came from the built-in vibe library. Allow it next time for a beat written just for you.'
+            : 'Built from the vibe library to match your words. Every pad is yours to change.'
       )
       celebrate(origin)
       toast.success('Your beat is ready', { description: 'Press play or hit space to hear it.' })
@@ -246,22 +232,17 @@ export default function Page() {
 
   const handleExport = useCallback(async () => {
     if (exporting) return
-    if (process.env.NEXT_PUBLIC_BB_PREVIEW === '1') {
-      toast('Export is off in this preview', { description: 'This hosted preview cannot start downloads. Run the full app to export WAV files.' })
-      return
-    }
     setExporting(true)
     try {
-      const blob = await getEngine().renderWav(patternRef.current, 4)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${beatName.trim() || 'beatbuddy'}.wav`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      setTimeout(() => URL.revokeObjectURL(url), 4000)
-      toast.success('WAV exported', { description: 'Four loops at 44.1 kHz. Drop it into any app.' })
+      const wav = await getEngine().renderWav(patternRef.current, 4)
+      const { outcome, zipped } = await saveWav(wav, beatName)
+      if (outcome === 'saved') {
+        toast.success('WAV exported', {
+          description: zipped ? 'Saved as a .zip with your WAV inside. Four loops at 44.1 kHz.' : 'Four loops at 44.1 kHz. Drop it into any app.',
+        })
+      } else if (outcome === 'unavailable') {
+        toast.error('Saving files is not available here', { description: 'Open this page in the Claude app or a desktop browser to export.' })
+      }
     } catch {
       toast.error('Export failed', { description: 'This browser blocked audio rendering. Try Chrome or Safari.' })
     } finally {

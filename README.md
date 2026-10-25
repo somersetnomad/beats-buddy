@@ -28,6 +28,10 @@ bun run dev        # http://localhost:3000
 
 Production: `bun run build && bun run start`.
 
+## Single-file build (Claude artifact)
+
+`npm run build:artifact` (needs `esbuild`: `npm i -D esbuild`) bundles the whole app into `dist/beatbuddy.html`. Published as a Claude artifact with the `sample` and `downloads` capabilities, beats are written by the viewer's Claude and exports save as a `.zip` holding the WAV. Without a Claude runtime it falls back to `/api/generate`, then to the built-in vibe library.
+
 ## Stack
 
 Next.js 16, React 19, Tailwind CSS 4, Framer Motion, Web Audio API (synthesised kit, lookahead scheduler, OfflineAudioContext export), canvas-confetti, self-hosted Unbounded + Onest variable fonts.

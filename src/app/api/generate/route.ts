@@ -1,26 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import ZAI from 'z-ai-web-dev-sdk'
 import { sanitizePattern } from '@/lib/beat/patterns'
-import { fallbackPattern } from '@/lib/beat/vibes'
+import { fallbackPattern, BEAT_PROMPT as SYSTEM_PROMPT } from '@/lib/beat/vibes'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-const SYSTEM_PROMPT = `You are a beat-pattern generator for a 16-step sequencer (one bar of 16th notes).
-Respond with ONLY valid JSON — no markdown fences, no commentary — matching exactly:
-{"bpm": <int 60-180>, "swing": <number 0-0.5>, "kick": [16 booleans], "snare": [16 booleans], "hihat": [16 booleans], "clap": [16 booleans], "bass": [6 rows x 16 booleans], "melody": [8 rows x 16 booleans]}
-
-Pitch rows go LOW to HIGH (row 0 = lowest):
-- bass rows: C2, D#2, F2, G2, A#2, C3
-- melody rows: C4, D#4, F4, G4, A#4, C5, D#5, F5 (C minor pentatonic)
-
-Rules for a musical result:
-- kick almost always hits step 0
-- snare and/or clap usually on steps 4 and 12 (half-time: only step 8)
-- hihat drives the groove; add rolls for trap energy
-- keep bass 3-6 notes, melody 3-7 notes — sparse and catchy, never every step
-- match the requested vibe, tempo and energy
-Example shape (do not copy content): {"bpm":90,"swing":0.14,"kick":[1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0],"snare":[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],"hihat":[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],"clap":[0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0],"bass":[[1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],"melody":[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0],[0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]}`
 
 function extractJson(text: string): unknown {
   const cleaned = text.replace(/```json/gi, '```').trim()
