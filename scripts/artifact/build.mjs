@@ -31,11 +31,36 @@ function fontCss(pkg) {
 }
 const fonts = fontCss('@fontsource-variable/unbounded') + fontCss('@fontsource-variable/onest')
 
-const html = `<title>BeatBuddy</title>
-<meta name="description" content="Tap the lights. Make a beat.">
-<style>${fonts}\n${out.css}</style>
+const body = `<style>${fonts}\n${out.css}</style>
 <div id="root"></div>
 <script>${code}</script>
 `
-fs.mkdirSync(path.join(REPO, 'dist'), { recursive: true }); fs.writeFileSync(path.join(REPO, 'dist/beatbuddy.html'), html)
+const pages = process.argv.includes('--pages')
+let html
+if (pages) {
+  // standalone document for GitHub Pages (or any static host): icons embedded, no server needed
+  const svgIcon = fs.readFileSync(path.join(REPO, 'src/app/icon.svg'), 'utf8')
+  const apple = fs.readFileSync(path.join(REPO, 'src/app/apple-icon.png')).toString('base64')
+  html = `<!doctype html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>BeatBuddy — make a beat tonight</title>
+<meta name="description" content="Tap the lights. Make a beat. Describe a vibe, get a beat, light up glowing pads to remix it, export WAV. Free, in your browser.">
+<meta name="theme-color" content="#0d0a1f">
+<meta property="og:title" content="BeatBuddy">
+<meta property="og:description" content="Tap the lights. Make a beat.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,${Buffer.from(svgIcon).toString('base64')}">
+<link rel="apple-touch-icon" href="data:image/png;base64,${apple}">
+</head>
+<body>
+${body}</body>
+</html>
+`
+  fs.writeFileSync(path.join(REPO, 'index.html'), html)
+} else {
+  html = `<title>BeatBuddy</title>\n<meta name="description" content="Tap the lights. Make a beat.">\n` + body
+  fs.mkdirSync(path.join(REPO, 'dist'), { recursive: true }); fs.writeFileSync(path.join(REPO, 'dist/beatbuddy.html'), html)
+}
 console.log('bytes', html.length, 'css', out.css.length, 'js', code.length, 'fonts', fonts.length)
